@@ -30,7 +30,7 @@ const router = express.Router();
 router.get('/list/:category',postControllers.getPostList)
 router.get("/:id",postControllers.getPost);
 
-router.post("/",postControllers.createPost);
+router.post("/",authenticate,postControllers.createPost);
 
 router.put("/:id",authenticate,postControllers.updatePost);
 

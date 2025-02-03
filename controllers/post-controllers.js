@@ -1,7 +1,6 @@
 const createError = require("../utils/createError");
 const prisma = require("../configs/prisma");
 const postService =require("../services/post-services");
-const { connect, put } = require("../routes/post-routes");
 
 exports.getPostList = async (req, resp, next) => {
   const { category } = req.params;
@@ -56,7 +55,7 @@ exports.getPost = async (req, resp, next) => {
 
 exports.createPost = async (req, resp, next) => {
   try {
-    const { title, content, category, userId, tags } = req.body;
+    const { title, content, category, tags } = req.body;
 
     if (!title) {
       return createError(400, "Title to be provided");
@@ -89,7 +88,7 @@ exports.createPost = async (req, resp, next) => {
         content,
         user: {
           connect: {
-            id: userId,
+            id: req.user.id,
           },
         },
         category: {
@@ -125,7 +124,7 @@ exports.createPost = async (req, resp, next) => {
 
 exports.updatePost = async(req, resp, next) => {
   const {id} = req.params;
-  const {title,content,userId,tags} = req.body;
+  const {title,content,tags} = req.body;
 
   if(!id){
     return createError(400,"Id to be provideds")
@@ -136,13 +135,11 @@ exports.updatePost = async(req, resp, next) => {
   if(!content){
     return createError(400,"Content to be provideds")
   }
-  if(!userId){
-    return createError(400,"User id to be provideds")
-  }
+  
   if(
     typeof title !=="string" ||
-    typeof content !=="string" ||
-    typeof userId !=="number"
+    typeof content !=="string" 
+   
   ){
     return createError(400,"Invalid typeof title,content or userId")
   }
@@ -161,7 +158,7 @@ exports.updatePost = async(req, resp, next) => {
   if (!post){
     return createError(400,"Post not Found")
   }
-  if(post.userId !== userId){
+  if(post.userId !== req.user.id){
     return createError(403,"Forbidden")
   }
   // const tagPromiseArray = tags.map((el)=>{
@@ -224,12 +221,12 @@ exports.deletePost = async(req, resp, next) => {
   }
   const post = await postService.getPostById(id);
 
-  if (userId !== post.userId){
+  if (req.user.id !== post.userId){
     return createError(403,"Forbidden")
   }
   await prisma.post.delete({
     where:{
-      id:post.id
+      id:post.id,
     }
   })
   resp.json({ message: "Delete Post" });
@@ -238,7 +235,7 @@ exports.deletePost = async(req, resp, next) => {
 exports.commentPost =async(req,resp,next)=>{
   try {
     const {id} = req.params
-    const {content, userId} =req.body
+    const {content} =req.body
     if(!id){
       return createError(400,"Post id to be provided")
     }
@@ -255,7 +252,7 @@ exports.commentPost =async(req,resp,next)=>{
         },
         user:{
           connect:{
-            id: userId,
+            id: req.user.id,
           }
         }
       }
@@ -269,7 +266,7 @@ exports.commentPost =async(req,resp,next)=>{
 exports.updateCommentPost =async(req,resp,next)=>{
   try {
     const {commentId} = req.params
-    const {content,userId} = req.body
+    const {content} = req.body
     if(!commentId){
       return createError(400,"comment id to be provided")
     }
@@ -279,7 +276,7 @@ exports.updateCommentPost =async(req,resp,next)=>{
     const comment = await prisma.comment.update({
       where:{
         id:Number(commentId),
-        userId,
+        userId:req.user.id,
       },
       data:{
         content,
@@ -295,7 +292,7 @@ exports.updateCommentPost =async(req,resp,next)=>{
 exports.deleteComment =async(req,resp,next)=>{
   try {
     const {commentId} = req.params
-    const {userId}=req.query
+   
     if(!commentId){
       return createError(400,"Comment id to be provided")
     }
@@ -304,7 +301,7 @@ exports.deleteComment =async(req,resp,next)=>{
         id: Number(commentId)
       },
     });
-    if(comment.userId !==Number(userId)){
+    if(comment.userId !== req.user.id){
       return createError(403,"Forbidden")
     }
     await prisma.comment.delete({
