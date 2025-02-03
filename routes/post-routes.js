@@ -36,6 +36,9 @@ router.put("/:id",authenticate,postControllers.updatePost);
 
 router.patch("/",authenticate,postControllers.updatePost);
 
-router.delete("/",authenticate,postControllers.deletePost);
+router.delete("/:id",authenticate,postControllers.deletePost);
+router.post("/:id/comment",authenticate,postControllers.commentPost)
+router.put("/comment/:commentId",authenticate,postControllers.updateCommentPost)
+router.delete("/comment/:commentId",authenticate,postControllers.deleteComment)
 
 module.exports =router;

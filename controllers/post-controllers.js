@@ -1,7 +1,7 @@
 const createError = require("../utils/createError");
 const prisma = require("../configs/prisma");
 const postService =require("../services/post-services");
-const { connect } = require("../routes/post-routes");
+const { connect, put } = require("../routes/post-routes");
 
 exports.getPostList = async (req, resp, next) => {
   const { category } = req.params;
@@ -213,7 +213,7 @@ exports.updatePost = async(req, resp, next) => {
         tags:true,
       }
     })
-  resp.json({ post: updatedPost });
+  resp.json({ updatedPost });
 };
 
 exports.deletePost = async(req, resp, next) => {
@@ -234,3 +234,87 @@ exports.deletePost = async(req, resp, next) => {
   })
   resp.json({ message: "Delete Post" });
 };
+
+exports.commentPost =async(req,resp,next)=>{
+  try {
+    const {id} = req.params
+    const {content, userId} =req.body
+    if(!id){
+      return createError(400,"Post id to be provided")
+    }
+    if(!content){
+      return createError(400,"Content to be provided")
+    }
+    const comment = await prisma.comment.create({
+      data:{
+        content,
+        post:{
+          connect:{
+            id:Number(id),
+          }
+        },
+        user:{
+          connect:{
+            id: userId,
+          }
+        }
+      }
+    })
+    resp.json({comment})
+  } catch (err) {
+    next(err)
+  }
+}
+
+exports.updateCommentPost =async(req,resp,next)=>{
+  try {
+    const {commentId} = req.params
+    const {content,userId} = req.body
+    if(!commentId){
+      return createError(400,"comment id to be provided")
+    }
+    if(!content){
+      return createError(400,"content to be provided")
+    }
+    const comment = await prisma.comment.update({
+      where:{
+        id:Number(commentId),
+        userId,
+      },
+      data:{
+        content,
+      }
+    })
+
+    resp.json({ comment })
+  } catch (err) {
+    next(err)
+  }
+}
+
+exports.deleteComment =async(req,resp,next)=>{
+  try {
+    const {commentId} = req.params
+    const {userId}=req.query
+    if(!commentId){
+      return createError(400,"Comment id to be provided")
+    }
+    const comment =await prisma.comment.findFirst({
+      where:{
+        id: Number(commentId)
+      },
+    });
+    if(comment.userId !==Number(userId)){
+      return createError(403,"Forbidden")
+    }
+    await prisma.comment.delete({
+      where:{
+        id:Number(commentId),
+      },
+    });
+
+    resp.status(204).json({message:"Delete comment"})
+  } catch (err) {
+    next(err)
+  }
+}
